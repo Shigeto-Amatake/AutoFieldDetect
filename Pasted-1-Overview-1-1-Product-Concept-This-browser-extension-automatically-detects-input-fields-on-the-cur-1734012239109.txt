@@ -1,0 +1,85 @@
+1. Overview
+1.1 Product Concept
+This browser extension automatically detects input fields on the currently active browser tab’s page and populates them with user-defined information. Users can freely define key-value pairs (e.g., name, address, email) in the extension’s settings page. The identification of input fields utilizes the ChatGPT API, which, based on the DOM structure and surrounding text of the page, associates the most appropriate user-defined data with each form field.
+
+1.2 Target Users
+General users who frequently fill out web forms (customer registration, inquiry forms, shipping information on e-commerce sites, etc.)
+Business users who want to repeatedly use a predefined set of standard information.
+1.3 Usage Scenarios
+A user who regularly inputs address or contact information can install the extension and enable auto-fill.
+When a web page with a form is displayed, the extension automatically scans the text fields and attempts to fill them with predefined data.
+If a new required field arises, the user can add a corresponding key-value pair from the settings page and repeat the process.
+2. Functional Requirements
+2.1 Core Features
+2.1.1 Automatic Field Filling
+Mandatory: Identify input fields (e.g., input[type="text"], input[type="email"], input[type="tel"], textarea) on the currently active page.
+Mandatory: Use the ChatGPT API to determine what each field represents.
+On page load or upon a user action (e.g., clicking the toolbar icon), retrieve the page’s DOM information and send it to the ChatGPT API.
+Use the returned information from the API to guess the purpose of each field and map it to user-defined keys.
+Mandatory: Once a field is matched with a user-defined key, the corresponding value is automatically entered into the input field.
+Optional: The timing of auto-filling (immediately upon page load, upon clicking the extension icon, or via a context menu) can be configured in the settings.
+2.1.2 Key-Value Settings
+Mandatory: Users can define arbitrary key-value pairs from the extension’s settings page.
+Mandatory: By default, the following keys are predefined:
+Last Name (性)
+First Name (名)
+Email Address (メールアドレス)
+Phone Number (電話番号)
+Postal Code (〒)
+Address Line 1 (住所１)
+Address Line 2 (住所２)
+Address Line 3 (住所３)
+Mandatory: Users can add up to 20 key-value pairs by clicking a “+” button.
+Mandatory: Users can freely edit or delete these key-value pairs.
+Mandatory: If the user attempts to exceed 20 key-value pairs, display an appropriate error message and prevent further additions.
+2.1.3 OpenAI API Key Setting
+Mandatory: In the settings page, users can input and save their OpenAI API key.
+Mandatory: The API key should be securely stored in the browser’s storage (e.g., chrome.storage.local) and used only when calling the ChatGPT API.
+Optional: Implement a key validity check (e.g., sending a simple ping request) and show an error message if invalid.
+2.1.4 Runtime Behavior
+Mandatory: Match the user-defined keys with the fields identified by ChatGPT. If the match is sufficiently certain, populate the field.
+Mandatory: After auto-filling, users can still manually edit the fields as normal.
+Optional: If multiple candidates exist or the confidence is low, display a confirmation dialog to allow the user to decide whether to fill the field or not.
+2.2 Security Requirements
+Mandatory: Do not expose the API key in plaintext. Store it securely and ensure communication with the OpenAI API is via HTTPS.
+Mandatory: Limit external communications to trusted endpoints only (OpenAI API, known secure CDNs, etc.).
+Mandatory: Prevent XSS vulnerabilities by properly escaping user inputs in the extension’s UI.
+Mandatory: When sending DOM information to the ChatGPT API, avoid including unnecessary personal user data and send only structural and labeling information needed for field identification.
+2.3 Error Messages and Exception Handling
+2.3.1 API Key Related
+If the API key is not set:
+“OpenAI API key is not configured. Please register your API key in the settings page.”
+If the API key is invalid or usage limit has been reached:
+“The OpenAI API key is invalid or has reached its request limit. Please verify or update your API key.”
+2.3.2 Exceeding Key-Value Pair Limit
+“A maximum of 20 key-value pairs can be registered. Please remove unnecessary items and try again.”
+2.3.3 API Call Failures
+Network or API response error:
+“Failed to communicate with the ChatGPT API. Check your network connection or try again later.”
+2.3.4 Field Matching Failure
+If no suitable field is found on the page:
+“No matching input fields were found. Please reload the page and try again.”
+2.3.5 General Unexpected Errors
+“An unexpected error occurred. Please restart the extension or contact support.”
+2.4 Performance Requirements
+For a standard web page (about 10–20 form fields), aim to complete the auto-filling process, including receiving ChatGPT API responses, within about 2–5 seconds.
+The extension should remain idle in the background and only perform minimal necessary actions during page transitions.
+2.5 Usability Requirements
+The settings page should have a simple UI (using standard web form designs or Material Design guidelines) that is intuitive and easy to operate.
+Clear buttons, tooltips, and instructions for adding/editing/deleting API keys and key-value pairs.
+Provide default values so that first-time users can benefit without immediate configuration.
+Include a link to documentation or a help page within the settings page.
+2.6 Logging and Troubleshooting
+For debugging, output logs to the browser’s developer console (invisible to the average user).
+In case of severe errors, record a simple error log in chrome.storage.local. Users can clear these logs if desired.
+3. Non-Functional Requirements
+3.1 Supported Browsers
+Support the latest version of Google Chrome (at least the two most recent major versions).
+3.2 Language and Locale Support
+The UI language will primarily be Japanese by default.
+3.3 Maintainability
+Write code with readability and maintainability in mind. If using frameworks like React or Vue, follow best practices.
+Implement the ChatGPT API interactions as a separate, well-abstracted module.
+Separate UI logic from business logic, and consider state management for handling key-value pairs.
+3.4 Versioning
+Start at Version 1.0.0 and use semantic versioning (SemVer) for subsequent updates.
