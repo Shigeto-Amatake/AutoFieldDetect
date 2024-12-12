@@ -1,5 +1,5 @@
 // Utility functions for Chrome storage operations
-const StorageUtil = {
+export const StorageUtil = {
   async getApiKey() {
     try {
       const result = await chrome.storage.local.get(['openaiApiKey']);

@@ -13,26 +13,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Static Server"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
 args = "Extension Dev Server"
-
-[[workflows.workflow]]
-name = "Static Server"
-author = "agent"
-
-[workflows.workflow.metadata]
-agentRequireRestartOnSave = false
-
-[[workflows.workflow.tasks]]
-task = "packager.installForAll"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "npx http-server -p 3000"
-waitForPort = 3000
 
 [[workflows.workflow]]
 name = "Extension Dev Server"
@@ -46,8 +27,8 @@ task = "packager.installForAll"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npx http-server . -c-1 --cors -p 3000"
-waitForPort = 3000
+args = "npx http-server . -c-1 --cors -p 8080"
+waitForPort = 8080
 
 [deployment]
 run = ["sh", "-c", "npx http-server -p 3000"]
@@ -55,3 +36,11 @@ run = ["sh", "-c", "npx http-server -p 3000"]
 [[ports]]
 localPort = 3000
 externalPort = 80
+
+[[ports]]
+localPort = 5000
+externalPort = 5000
+
+[[ports]]
+localPort = 8080
+externalPort = 8080

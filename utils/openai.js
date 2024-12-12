@@ -1,7 +1,9 @@
 // OpenAI API interaction utilities
 // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
 
-class OpenAIUtil {
+import OpenAI from 'openai';
+
+export class OpenAIUtil {
   constructor(apiKey) {
     this.apiKey = apiKey;
     this.API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
