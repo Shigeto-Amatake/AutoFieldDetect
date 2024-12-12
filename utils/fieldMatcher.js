@@ -55,4 +55,5 @@ const FieldMatcher = {
   }
 };
 
+export { FieldMatcher };
 export default FieldMatcher;
