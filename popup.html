@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>スマートフォームフィラー設定</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>スマートフォームフィラー</h1>
+    
+    <div class="section">
+      <h2>APIキー設定</h2>
+      <div class="api-key-section">
+        <input type="password" id="apiKey" placeholder="OpenAI APIキー">
+        <button id="saveApiKey">保存</button>
+      </div>
+    </div>
+
+    <div class="section">
+      <h2>入力項目設定</h2>
+      <div id="keyValuePairs">
+        <!-- Key-value pairs will be inserted here -->
+      </div>
+      <button id="addPair" class="add-button">＋ 新規項目追加</button>
+    </div>
+
+    <div class="actions">
+      <button id="fillFields" class="primary-button">フォームに自動入力</button>
+    </div>
+
+    <div id="status" class="status"></div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

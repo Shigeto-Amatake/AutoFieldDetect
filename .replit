@@ -1,0 +1,57 @@
+modules = ["nodejs-20"]
+
+[nix]
+channel = "stable-24_05"
+
+[workflows]
+runButton = "Project"
+
+[[workflows.workflow]]
+name = "Project"
+mode = "parallel"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Static Server"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Extension Dev Server"
+
+[[workflows.workflow]]
+name = "Static Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx http-server -p 3000"
+waitForPort = 3000
+
+[[workflows.workflow]]
+name = "Extension Dev Server"
+author = "agent"
+
+[workflows.workflow.metadata]
+agentRequireRestartOnSave = false
+
+[[workflows.workflow.tasks]]
+task = "packager.installForAll"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "npx http-server . -c-1 --cors -p 3000"
+waitForPort = 3000
+
+[deployment]
+run = ["sh", "-c", "npx http-server -p 3000"]
+
+[[ports]]
+localPort = 3000
+externalPort = 80
