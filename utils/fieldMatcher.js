@@ -1,5 +1,5 @@
 // Utility functions for matching form fields with user-defined keys
-const FieldMatcher = {
+export const FieldMatcher = {
   calculateMatchScore(fieldInfo, userKey) {
     let score = 0;
     const keyLower = userKey.toLowerCase();

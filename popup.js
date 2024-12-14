@@ -251,6 +251,8 @@ async function fillFormFields() {
   }
 }
 
+import { FieldMatcher } from './utils/fieldMatcher.js';
+
 function mapFieldsToValues(analysis, keyValuePairs) {
   const mappings = {};
   Object.entries(analysis).forEach(([fieldId, field]) => {
