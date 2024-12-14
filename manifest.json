@@ -27,11 +27,10 @@
     }
   },
   "background": {
-    "service_worker": "background.js",
-    "type": "module"
+    "service_worker": "background.js"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
   },
   "content_scripts": [
     {
@@ -41,7 +40,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["utils/*.js", "*.js"],
+      "resources": ["utils/*", "*.js"],
       "matches": ["<all_urls>"]
     }
   ]
