@@ -230,27 +230,59 @@ console.log('Form Filler content script initializing...');
 let isInitialized = false;
 
 // Initialize the content script
-function initialize() {
+async function initialize() {
   if (isInitialized) return;
   
   console.log('Form Filler content script initializing...');
   try {
-    // Additional initialization logic can go here
+    // Ensure we're in the main frame
+    if (window.top !== window.self) {
+      console.log('Skipping initialization in iframe');
+      return;
+    }
+
+    // Wait for DOM to be ready
+    if (document.readyState !== 'complete' && document.readyState !== 'interactive') {
+      await new Promise(resolve => {
+        document.addEventListener('DOMContentLoaded', resolve, { once: true });
+      });
+    }
+
+    // Perform initial form field scan
+    formFields = detectFormFields();
+    console.log('Initial form fields detected:', formFields.length);
+
     isInitialized = true;
     console.log('Form Filler content script initialized successfully');
+
+    // Notify that initialization is complete
+    chrome.runtime.sendMessage({ 
+      type: 'CONTENT_SCRIPT_READY',
+      url: window.location.href
+    });
   } catch (error) {
     console.error('Content script initialization error:', error);
+    isInitialized = false;
   }
 }
 
-// Initialize on both DOMContentLoaded and load events to ensure we don't miss either
-document.addEventListener('DOMContentLoaded', initialize);
-window.addEventListener('load', initialize);
+// Initialize when the script loads
+initialize().catch(error => {
+  console.error('Failed to initialize content script:', error);
+});
 
-// Initialize immediately if document is already loaded
-if (document.readyState === 'complete' || document.readyState === 'interactive') {
-  initialize();
-}
+// Re-initialize on navigation within SPA
+let previousUrl = window.location.href;
+const observer = new MutationObserver(() => {
+  if (window.location.href !== previousUrl) {
+    previousUrl = window.location.href;
+    console.log('URL changed, reinitializing...');
+    isInitialized = false;
+    initialize().catch(console.error);
+  }
+});
+
+observer.observe(document, { subtree: true, childList: true });
 
 // Set up message listener
 const messageListener = (request, sender, sendResponse) => {
@@ -312,10 +344,23 @@ const messageListener = (request, sender, sendResponse) => {
 };
 
 // Register message listener
-chrome.runtime.onMessage.addListener(messageListener);
+try {
+  chrome.runtime.onMessage.addListener(messageListener);
+  console.log('Message listener registered successfully');
+} catch (error) {
+  console.error('Failed to register message listener:', error);
+}
 
-// Inject a script to notify that content script is ready
-const readyScript = document.createElement('script');
-readyScript.textContent = 'window.formFillerContentScriptReady = true;';
-(document.head || document.documentElement).appendChild(readyScript);
+// Setup error handling for disconnection
+chrome.runtime.onConnect.addListener(port => {
+  port.onDisconnect.addListener(() => {
+    if (chrome.runtime.lastError) {
+      console.log('Port disconnected:', chrome.runtime.lastError.message);
+      // Attempt to re-initialize
+      isInitialized = false;
+      initialize().catch(console.error);
+    }
+  });
+});
+
 console.log('Form Filler content script ready');
