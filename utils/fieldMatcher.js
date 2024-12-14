@@ -32,10 +32,32 @@ const FieldMatcher = {
     return score;
   },
 
-  findBestMatch(fieldInfo, userKeys) {
+  findBestMatch(fieldInfo, userKeys, keyValuePairs) {
     let bestMatch = null;
     let bestScore = 0;
+    let isNameField = false;
 
+    // Check if this is a general name field
+    const nameIndicators = ['name', '名前', 'お名前'];
+    isNameField = nameIndicators.some(indicator => 
+      fieldInfo.label?.toLowerCase().includes(indicator.toLowerCase()) ||
+      fieldInfo.placeholder?.toLowerCase().includes(indicator.toLowerCase())
+    );
+
+    // If it's a general name field, try to combine sex and name
+    if (isNameField) {
+      const sexValue = keyValuePairs.find(pair => pair.key === '性')?.value || '';
+      const nameValue = keyValuePairs.find(pair => pair.key === '名')?.value || '';
+      if (sexValue && nameValue) {
+        return {
+          key: '氏名',
+          value: `${sexValue}${nameValue}`,
+          score: 5
+        };
+      }
+    }
+
+    // Regular matching logic
     userKeys.forEach(key => {
       const score = this.calculateMatchScore(fieldInfo, key);
       if (score > bestScore) {
@@ -44,8 +66,7 @@ const FieldMatcher = {
       }
     });
 
-    // Return match only if score is above threshold
-    return bestScore >= 2 ? bestMatch : null;
+    return bestScore >= 2 ? { key: bestMatch, score: bestScore } : null;
   },
 
   getConfidenceLevel(score) {

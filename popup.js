@@ -56,8 +56,17 @@ function addKeyValuePair() {
   }
 
   keyValuePairs.push({ key: '', value: '' });
-  saveKeyValuePairs();
-  renderKeyValuePairs();
+  renderKeyValuePairs(); // Render first to show the new fields
+  saveKeyValuePairs(); // Then save to ensure the rendered fields are included
+  
+  // Focus the new key input field
+  setTimeout(() => {
+    const inputs = document.querySelectorAll('.key-input');
+    const newInput = inputs[inputs.length - 1];
+    if (newInput) {
+      newInput.focus();
+    }
+  }, 0);
 }
 
 function renderKeyValuePairs() {
@@ -245,12 +254,30 @@ async function fillFormFields() {
 function mapFieldsToValues(analysis, keyValuePairs) {
   const mappings = {};
   Object.entries(analysis).forEach(([fieldId, field]) => {
-    const matchingPair = keyValuePairs.find(pair => 
-      field.purpose.toLowerCase().includes(pair.key.toLowerCase()) &&
-      field.confidence >= 0.6 // Only use matches with decent confidence
+    // Try to find a matching field using the enhanced matcher
+    const fieldInfo = {
+      label: field.purpose,
+      placeholder: field.purpose,
+      id: fieldId
+    };
+    
+    const match = FieldMatcher.findBestMatch(
+      fieldInfo,
+      keyValuePairs.map(pair => pair.key),
+      keyValuePairs
     );
-    if (matchingPair) {
-      mappings[fieldId] = matchingPair.value;
+
+    if (match) {
+      if (match.value) {
+        // This is a combined value (e.g., sex + name)
+        mappings[fieldId] = match.value;
+      } else {
+        // Regular key-value pair
+        const matchingPair = keyValuePairs.find(pair => pair.key === match.key);
+        if (matchingPair && field.confidence >= 0.6) {
+          mappings[fieldId] = matchingPair.value;
+        }
+      }
     }
   });
   return mappings;
