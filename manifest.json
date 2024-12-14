@@ -17,10 +17,6 @@
   "externally_connectable": {
     "matches": ["*://*/*"]
   },
-  "web_accessible_resources": [{
-    "resources": ["utils/*.js"],
-    "matches": ["<all_urls>"]
-  }],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {
@@ -39,13 +35,13 @@
     {
       "matches": ["<all_urls>"],
       "js": ["utils/storage.js", "utils/fieldMatcher.js", "content.js"],
-      "run_at": "document_idle",
+      "run_at": "document_end",
       "all_frames": false
     }
   ],
   "web_accessible_resources": [
     {
-      "resources": ["utils/*"],
+      "resources": ["utils/*", "content.js"],
       "matches": ["<all_urls>"]
     }
   ]

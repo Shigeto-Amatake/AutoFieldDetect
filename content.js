@@ -288,12 +288,15 @@ observer.observe(document, { subtree: true, childList: true });
 const messageListener = (request, sender, sendResponse) => {
   console.log('Received message:', request.type);
   
-  // Always respond to PING messages, even if not fully initialized
+  // Always respond to PING messages with current status
   if (request.type === 'PING') {
+    const status = isInitialized ? 'ready' : 'initializing';
+    console.log(`Responding to PING with status: ${status}`);
     sendResponse({ 
-      status: 'ready',
+      status,
       initialized: isInitialized,
-      documentState: document.readyState
+      documentState: document.readyState,
+      url: window.location.href
     });
     return true;
   }

@@ -136,38 +136,41 @@ async function fillFormFields() {
     
     logDebug('Found active tab: ' + tab.url);
     
-    // Scan fields in the current page
-    logDebug('Scanning for form fields...');
+    // Inject content script if not already injected
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: tab.id },
+        files: ['utils/storage.js', 'utils/fieldMatcher.js', 'content.js']
+      });
+      logDebug('Content scripts injected successfully');
+    } catch (error) {
+      logDebug('Content scripts already injected or injection failed: ' + error.message);
+    }
     
-    // Wait for content script to be ready
+    // Wait for content script to be ready with improved timeout handling
     await new Promise((resolve, reject) => {
-      let attempts = 0;
-      const maxAttempts = 50; // 5 seconds maximum wait time
+      const startTime = Date.now();
+      const timeout = 5000; // 5 second timeout
       
-      const checkReady = () => {
-        attempts++;
-        chrome.tabs.sendMessage(tab.id, { type: 'PING' }, response => {
-          const error = chrome.runtime.lastError;
-          if (error) {
-            console.log(`Attempt ${attempts}/${maxAttempts}: Content script not ready:`, error.message);
-            if (attempts >= maxAttempts) {
-              reject(new Error('Content script failed to initialize after multiple attempts'));
-              return;
-            }
-            setTimeout(checkReady, 100);
-          } else if (!response || !response.initialized) {
-            console.log(`Attempt ${attempts}/${maxAttempts}: Content script initializing...`);
-            if (attempts >= maxAttempts) {
-              reject(new Error('Content script failed to initialize completely'));
-              return;
-            }
-            setTimeout(checkReady, 100);
-          } else {
-            console.log('Content script ready:', response);
+      const checkReady = async () => {
+        if (Date.now() - startTime > timeout) {
+          reject(new Error('Content script initialization timed out'));
+          return;
+        }
+        
+        try {
+          const response = await chrome.tabs.sendMessage(tab.id, { type: 'PING' });
+          if (response && response.status === 'ready') {
+            logDebug('Content script ready');
             resolve();
+          } else {
+            setTimeout(checkReady, 100);
           }
-        });
+        } catch (error) {
+          setTimeout(checkReady, 100);
+        }
       };
+      
       checkReady();
     });
     
