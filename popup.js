@@ -95,21 +95,33 @@ async function fillFormFields() {
   try {
     // Get form fields from the active tab
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab) {
+      throw new Error('アクティブなタブが見つかりません');
+    }
     
-    const fields = await new Promise((resolve) => {
+    // Scan fields in the current page
+    const response = await new Promise((resolve) => {
       chrome.tabs.sendMessage(tab.id, { type: 'SCAN_FIELDS' }, resolve);
     });
+    
+    if (!response || !response.fields) {
+      throw new Error('フォームフィールドの取得に失敗しました');
+    }
 
     // Analyze fields using ChatGPT
     const analysis = await new Promise((resolve) => {
       chrome.runtime.sendMessage({ 
         type: 'ANALYZE_FIELDS', 
-        data: fields.fields 
+        data: response.fields 
       }, resolve);
     });
 
+    if (analysis.error) {
+      throw new Error(analysis.error);
+    }
+
     // Map analyzed fields to stored values
-    const mappings = mapFieldsToValues(JSON.parse(analysis), keyValuePairs);
+    const mappings = mapFieldsToValues(analysis.result, keyValuePairs);
 
     // Fill the form
     await chrome.tabs.sendMessage(tab.id, { 
@@ -119,18 +131,20 @@ async function fillFormFields() {
 
     showStatus('フォームの入力が完了しました', 'success');
   } catch (error) {
+    console.error('Form filling error:', error);
     showStatus(error.message || '予期せぬエラーが発生しました', 'error');
   }
 }
 
 function mapFieldsToValues(analysis, keyValuePairs) {
   const mappings = {};
-  Object.entries(analysis).forEach(([selector, purpose]) => {
+  Object.entries(analysis).forEach(([fieldId, field]) => {
     const matchingPair = keyValuePairs.find(pair => 
-      purpose.toLowerCase().includes(pair.key.toLowerCase())
+      field.purpose.toLowerCase().includes(pair.key.toLowerCase()) &&
+      field.confidence >= 0.6 // Only use matches with decent confidence
     );
     if (matchingPair) {
-      mappings[selector] = matchingPair.value;
+      mappings[fieldId] = matchingPair.value;
     }
   });
   return mappings;
