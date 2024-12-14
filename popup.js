@@ -251,8 +251,6 @@ async function fillFormFields() {
   }
 }
 
-import { FieldMatcher } from './utils/fieldMatcher.js';
-
 function mapFieldsToValues(analysis, keyValuePairs) {
   const mappings = {};
   Object.entries(analysis).forEach(([fieldId, field]) => {
@@ -273,11 +271,13 @@ function mapFieldsToValues(analysis, keyValuePairs) {
       if (match.value) {
         // This is a combined value (e.g., sex + name)
         mappings[fieldId] = match.value;
-      } else {
+        logDebug(`Combined field mapping: ${fieldId} -> ${match.value}`);
+      } else if (match.key) {
         // Regular key-value pair
         const matchingPair = keyValuePairs.find(pair => pair.key === match.key);
-        if (matchingPair && field.confidence >= 0.6) {
+        if (matchingPair) {
           mappings[fieldId] = matchingPair.value;
+          logDebug(`Regular field mapping: ${fieldId} -> ${matchingPair.value}`);
         }
       }
     }
