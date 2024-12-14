@@ -223,20 +223,49 @@ function fillField(element, value) {
   console.log(`Field filled successfully: ${element.name || element.id}`);
 }
 
+// Initialize content script
+console.log('Form Filler content script initialized');
+
 // Listen for messages from the popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  console.log('Received message:', request.type);
+  
   if (request.type === 'SCAN_FIELDS') {
-    formFields = detectFormFields();
-    sendResponse({ fields: formFields });
+    try {
+      formFields = detectFormFields();
+      console.log('Detected form fields:', formFields.length);
+      sendResponse({ fields: formFields });
+    } catch (error) {
+      console.error('Error scanning fields:', error);
+      sendResponse({ error: error.message });
+    }
   } else if (request.type === 'FILL_FIELDS') {
-    const { mappings } = request;
-    Object.entries(mappings).forEach(([selector, value]) => {
-      const element = document.querySelector(selector);
-      if (element) {
-        fillField(element, value);
-      }
-    });
-    sendResponse({ success: true });
+    try {
+      const { mappings } = request;
+      console.log('Filling fields with mappings:', mappings);
+      
+      Object.entries(mappings).forEach(([fieldId, value]) => {
+        const field = formFields.find(f => f.id === fieldId);
+        if (field) {
+          const element = document.querySelector(field.selector);
+          if (element) {
+            fillField(element, value);
+          } else {
+            console.warn('Element not found for selector:', field.selector);
+          }
+        }
+      });
+      
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Error filling fields:', error);
+      sendResponse({ error: error.message });
+    }
   }
+  
+  // Return true to indicate we'll send a response asynchronously
   return true;
 });
+
+// Notify that content script is ready
+console.log('Form Filler content script ready');
