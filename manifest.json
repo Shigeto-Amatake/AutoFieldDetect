@@ -14,6 +14,9 @@
     "http://*/*",
     "https://*/*"
   ],
+  "externally_connectable": {
+    "matches": ["*://*/*"]
+  },
   "web_accessible_resources": [{
     "resources": ["utils/*.js"],
     "matches": ["<all_urls>"]
@@ -36,7 +39,8 @@
     {
       "matches": ["<all_urls>"],
       "js": ["content.js"],
-      "run_at": "document_end"
+      "run_at": "document_start",
+      "all_frames": true
     }
   ],
   "web_accessible_resources": [

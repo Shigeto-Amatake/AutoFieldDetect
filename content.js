@@ -224,11 +224,55 @@ function fillField(element, value) {
 }
 
 // Initialize content script
-console.log('Form Filler content script initialized');
+console.log('Form Filler content script initializing...');
 
-// Listen for messages from the popup
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+// Track initialization state
+let isInitialized = false;
+
+// Initialize the content script
+function initialize() {
+  if (isInitialized) return;
+  
+  console.log('Form Filler content script initializing...');
+  try {
+    // Additional initialization logic can go here
+    isInitialized = true;
+    console.log('Form Filler content script initialized successfully');
+  } catch (error) {
+    console.error('Content script initialization error:', error);
+  }
+}
+
+// Initialize on both DOMContentLoaded and load events to ensure we don't miss either
+document.addEventListener('DOMContentLoaded', initialize);
+window.addEventListener('load', initialize);
+
+// Initialize immediately if document is already loaded
+if (document.readyState === 'complete' || document.readyState === 'interactive') {
+  initialize();
+}
+
+// Set up message listener
+const messageListener = (request, sender, sendResponse) => {
   console.log('Received message:', request.type);
+  
+  // Always respond to PING messages, even if not fully initialized
+  if (request.type === 'PING') {
+    sendResponse({ 
+      status: 'ready',
+      initialized: isInitialized,
+      documentState: document.readyState
+    });
+    return true;
+  }
+
+  // For other messages, ensure we're initialized
+  if (!isInitialized) {
+    console.warn('Content script not yet initialized, retrying initialization...');
+    initialize();
+    sendResponse({ error: 'Content script not yet initialized' });
+    return true;
+  }
   
   if (request.type === 'SCAN_FIELDS') {
     try {
@@ -265,7 +309,13 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   
   // Return true to indicate we'll send a response asynchronously
   return true;
-});
+};
 
-// Notify that content script is ready
+// Register message listener
+chrome.runtime.onMessage.addListener(messageListener);
+
+// Inject a script to notify that content script is ready
+const readyScript = document.createElement('script');
+readyScript.textContent = 'window.formFillerContentScriptReady = true;';
+(document.head || document.documentElement).appendChild(readyScript);
 console.log('Form Filler content script ready');

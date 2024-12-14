@@ -3,19 +3,6 @@ let keyValuePairs = [];
 document.addEventListener('DOMContentLoaded', () => {
   loadSettings();
   setupEventListeners();
-  // Add debug log element to the DOM (assuming a div with id 'debugLog' exists in the HTML)
-  const debugLog = document.createElement('div');
-  debugLog.id = 'debugLog';
-  debugLog.style.height = '300px';
-  debugLog.style.overflowY = 'scroll';
-  document.body.appendChild(debugLog);
-
-  // Move the auto-fill button to the top (assuming the button has id 'fillFields')
-  const fillFieldsButton = document.getElementById('fillFields');
-  if (fillFieldsButton) {
-    document.body.insertBefore(fillFieldsButton, document.getElementById('apiKey').parentElement);
-  }
-
 });
 
 function loadSettings() {
@@ -122,12 +109,17 @@ function deletePair(index) {
 }
 
 function saveKeyValuePairs() {
+  // Remove empty pairs before saving
+  keyValuePairs = keyValuePairs.filter(pair => pair.key.trim() !== '' || pair.value.trim() !== '');
+  
   chrome.storage.local.set({ keyValuePairs }, () => {
     if (chrome.runtime.lastError) {
       showStatus('設定の保存に失敗しました', 'error');
       logDebug('Error saving key-value pairs: ' + chrome.runtime.lastError.message);
     } else {
+      showStatus('設定を保存しました', 'success');
       logDebug('Key-value pairs saved successfully');
+      renderKeyValuePairs(); // Re-render to reflect changes
     }
   });
 }
@@ -146,6 +138,39 @@ async function fillFormFields() {
     
     // Scan fields in the current page
     logDebug('Scanning for form fields...');
+    
+    // Wait for content script to be ready
+    await new Promise((resolve, reject) => {
+      let attempts = 0;
+      const maxAttempts = 50; // 5 seconds maximum wait time
+      
+      const checkReady = () => {
+        attempts++;
+        chrome.tabs.sendMessage(tab.id, { type: 'PING' }, response => {
+          const error = chrome.runtime.lastError;
+          if (error) {
+            console.log(`Attempt ${attempts}/${maxAttempts}: Content script not ready:`, error.message);
+            if (attempts >= maxAttempts) {
+              reject(new Error('Content script failed to initialize after multiple attempts'));
+              return;
+            }
+            setTimeout(checkReady, 100);
+          } else if (!response || !response.initialized) {
+            console.log(`Attempt ${attempts}/${maxAttempts}: Content script initializing...`);
+            if (attempts >= maxAttempts) {
+              reject(new Error('Content script failed to initialize completely'));
+              return;
+            }
+            setTimeout(checkReady, 100);
+          } else {
+            console.log('Content script ready:', response);
+            resolve();
+          }
+        });
+      };
+      checkReady();
+    });
+    
     const response = await new Promise((resolve) => {
       chrome.tabs.sendMessage(tab.id, { type: 'SCAN_FIELDS' }, (result) => {
         if (chrome.runtime.lastError) {
@@ -241,7 +266,11 @@ function showStatus(message, type) {
 
 function logDebug(message) {
   const debugLog = document.getElementById('debugLog');
-  const timestamp = new Date().toLocaleTimeString();
-  const logEntry = `[${timestamp}] ${message}\n`;
-  debugLog.textContent = logEntry + debugLog.textContent;
+  if (debugLog) {
+    const timestamp = new Date().toLocaleTimeString();
+    const logEntry = `[${timestamp}] ${message}\n`;
+    debugLog.textContent = logEntry + debugLog.textContent;
+    debugLog.scrollTop = 0; // Keep scroll at top for newest messages
+    console.log(message); // Also log to console for debugging
+  }
 }

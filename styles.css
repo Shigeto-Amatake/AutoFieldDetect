@@ -32,6 +32,22 @@ body {
   white-space: pre-wrap;
   word-wrap: break-word;
 }
+.debug-log-section {
+  margin-top: 16px;
+}
+
+.debug-log {
+  height: 300px;
+  overflow-y: auto;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 8px;
+  font-family: monospace;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
 
 h1 {
   font-size: 18px;

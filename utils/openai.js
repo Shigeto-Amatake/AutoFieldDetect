@@ -54,7 +54,7 @@ export class OpenAIUtil {
             }
           ],
           response_format: { type: "json_object" },
-          temperature: 0.3, // Lower temperature for more consistent results
+          temperature: 0.3,
           max_tokens: 1000
         })
       });
@@ -65,11 +65,15 @@ export class OpenAIUtil {
       }
 
       const result = await response.json();
+      if (!result.choices || !result.choices[0]?.message?.content) {
+        throw new Error('OpenAI APIからの応答が不正です。');
+      }
+
       return JSON.parse(result.choices[0].message.content);
 
     } catch (error) {
       console.error('OpenAI API Error:', error);
-      throw this.handleAPIError(error.status, error);
+      throw this.handleAPIError(error.status || 500, error);
     }
   }
 
