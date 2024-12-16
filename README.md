@@ -68,7 +68,7 @@
 
 1. **リポジトリのクローンまたはダウンロード**
    ```bash
-   git clone https://github.com/あなたのユーザー名/スマートフォームフィラー.git   ```
+   git clone https://github.com/Shigeto-Amatake/AutoFieldDetect.git   ```
 
 2. **ブラウザへの読み込み**
 
