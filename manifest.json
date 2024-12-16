@@ -41,7 +41,7 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["utils/*", "content.js"],
+      "resources": ["utils/*", "content.js", "popup.js", "popup.html", "styles.css"],
       "matches": ["<all_urls>"]
     }
   ]

@@ -55,23 +55,51 @@ function addKeyValuePair() {
     return;
   }
 
-  keyValuePairs.push({ key: '', value: '' });
-  renderKeyValuePairs(); // Render first to show the new fields
-  saveKeyValuePairs(); // Then save to ensure the rendered fields are included
+  // Add new pair to the array
+  const newPair = { key: '', value: '' };
+  keyValuePairs = [...keyValuePairs, newPair];
   
-  // Focus the new key input field
-  setTimeout(() => {
-    const inputs = document.querySelectorAll('.key-input');
-    const newInput = inputs[inputs.length - 1];
-    if (newInput) {
-      newInput.focus();
-    }
-  }, 0);
+  logDebug('新しい項目を追加します...');
+  
+  // Render the updated list and handle focus
+  const container = document.getElementById('keyValuePairs');
+  if (container) {
+    renderKeyValuePairs();
+    
+    // Ensure DOM is updated and handle focus
+    setTimeout(() => {
+      const inputs = container.querySelectorAll('.key-input');
+      const newInput = inputs[inputs.length - 1];
+      if (newInput) {
+        newInput.focus();
+        saveKeyValuePairs();
+        logDebug('新しい項目を追加し、フォーカスを設定しました');
+        showStatus('新し���項目を追加しました', 'success');
+      } else {
+        logDebug('新しい入力フィールドが見つかりませんでした');
+        showStatus('項目の追加に失敗しました', 'error');
+      }
+    }, 100);
+  } else {
+    logDebug('コンテナ要素が見つかりませんでした');
+    showStatus('項目の追加に失敗しました', 'error');
+  }
 }
 
 function renderKeyValuePairs() {
   const container = document.getElementById('keyValuePairs');
-  container.innerHTML = '';
+  if (!container) {
+    logDebug('keyValuePairs コンテナが見つかりません');
+    return;
+  }
+
+  // Clear existing content
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+
+  // Create document fragment for better performance
+  const fragment = document.createDocumentFragment();
 
   keyValuePairs.forEach((pair, index) => {
     const pairDiv = document.createElement('div');
@@ -83,7 +111,7 @@ function renderKeyValuePairs() {
     keyInput.value = pair.key;
     keyInput.placeholder = 'キー';
     keyInput.dataset.index = index;
-    keyInput.addEventListener('change', (e) => updatePair(index, 'key', e.target.value));
+    keyInput.addEventListener('input', (e) => updatePair(index, 'key', e.target.value));
     
     const valueInput = document.createElement('input');
     valueInput.type = 'text';
@@ -91,7 +119,7 @@ function renderKeyValuePairs() {
     valueInput.value = pair.value;
     valueInput.placeholder = '値';
     valueInput.dataset.index = index;
-    valueInput.addEventListener('change', (e) => updatePair(index, 'value', e.target.value));
+    valueInput.addEventListener('input', (e) => updatePair(index, 'value', e.target.value));
     
     const deleteButton = document.createElement('button');
     deleteButton.className = 'delete-button';
@@ -101,8 +129,12 @@ function renderKeyValuePairs() {
     pairDiv.appendChild(keyInput);
     pairDiv.appendChild(valueInput);
     pairDiv.appendChild(deleteButton);
-    container.appendChild(pairDiv);
+    fragment.appendChild(pairDiv);
   });
+
+  // Add all elements at once
+  container.appendChild(fragment);
+  logDebug(`${keyValuePairs.length}個の項目をレンダリングしました`);
 }
 
 function updatePair(index, field, value) {
@@ -118,17 +150,28 @@ function deletePair(index) {
 }
 
 function saveKeyValuePairs() {
-  // Remove empty pairs before saving
-  keyValuePairs = keyValuePairs.filter(pair => pair.key.trim() !== '' || pair.value.trim() !== '');
+  // Only filter out empty pairs during final save, not during editing
+  const pairsToSave = keyValuePairs.filter(pair => {
+    const isEmpty = pair.key.trim() === '' && pair.value.trim() === '';
+    // Keep the last empty pair for new entries
+    if (isEmpty && pair === keyValuePairs[keyValuePairs.length - 1]) {
+      return true;
+    }
+    return !isEmpty;
+  });
   
-  chrome.storage.local.set({ keyValuePairs }, () => {
+  chrome.storage.local.set({ keyValuePairs: pairsToSave }, () => {
     if (chrome.runtime.lastError) {
       showStatus('設定の保存に失敗しました', 'error');
       logDebug('Error saving key-value pairs: ' + chrome.runtime.lastError.message);
     } else {
       showStatus('設定を保存しました', 'success');
-      logDebug('Key-value pairs saved successfully');
-      renderKeyValuePairs(); // Re-render to reflect changes
+      logDebug(`${pairsToSave.length}個の項目を保存しました`);
+      // Only re-render if the number of pairs has changed
+      if (pairsToSave.length !== keyValuePairs.length) {
+        keyValuePairs = pairsToSave;
+        renderKeyValuePairs();
+      }
     }
   });
 }
@@ -208,7 +251,10 @@ async function fillFormFields() {
     const analysis = await new Promise((resolve) => {
       chrome.runtime.sendMessage({ 
         type: 'ANALYZE_FIELDS', 
-        data: response.fields 
+        data: { 
+          fields: response.fields, 
+          keyValuePairs 
+        }
       }, (result) => {
         if (chrome.runtime.lastError) {
           resolve({ error: chrome.runtime.lastError.message });
@@ -224,7 +270,7 @@ async function fillFormFields() {
 
     // Map analyzed fields to stored values
     logDebug('Mapping fields to stored values...');
-    const mappings = mapFieldsToValues(analysis.result, keyValuePairs);
+    const mappings = analysis.result;
     logDebug(`Created mappings for ${Object.keys(mappings).length} fields`);
 
     // Fill the form
@@ -249,40 +295,6 @@ async function fillFormFields() {
     logDebug('Error: ' + error.message);
     showStatus(error.message || '予期せぬエラーが発生しました', 'error');
   }
-}
-
-function mapFieldsToValues(analysis, keyValuePairs) {
-  const mappings = {};
-  Object.entries(analysis).forEach(([fieldId, field]) => {
-    // Try to find a matching field using the enhanced matcher
-    const fieldInfo = {
-      label: field.purpose,
-      placeholder: field.purpose,
-      id: fieldId
-    };
-    
-    const match = FieldMatcher.findBestMatch(
-      fieldInfo,
-      keyValuePairs.map(pair => pair.key),
-      keyValuePairs
-    );
-
-    if (match) {
-      if (match.value) {
-        // This is a combined value (e.g., sex + name)
-        mappings[fieldId] = match.value;
-        logDebug(`Combined field mapping: ${fieldId} -> ${match.value}`);
-      } else if (match.key) {
-        // Regular key-value pair
-        const matchingPair = keyValuePairs.find(pair => pair.key === match.key);
-        if (matchingPair) {
-          mappings[fieldId] = matchingPair.value;
-          logDebug(`Regular field mapping: ${fieldId} -> ${matchingPair.value}`);
-        }
-      }
-    }
-  });
-  return mappings;
 }
 
 function showStatus(message, type) {

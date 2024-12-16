@@ -78,16 +78,16 @@ h2 {
 
 .key-value-pair {
   display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 .key-input,
 .value-input {
+  flex: 1;
   padding: 8px;
   border: 1px solid #ccc;
   border-radius: 4px;
-  font-size: 14px;
 }
 
 .key-input {
@@ -113,12 +113,16 @@ button:hover {
 }
 
 .delete-button {
-  background: #dc3545;
-  padding: 4px 8px;
+  background-color: #ff4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 12px;
+  cursor: pointer;
 }
 
 .delete-button:hover {
-  background: #bb2d3b;
+  background-color: #cc0000;
 }
 
 .add-button {

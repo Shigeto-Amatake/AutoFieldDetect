@@ -35,7 +35,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       return true;
     }
 
-    analyzeFields(request.data)
+    analyzeFields(request.data.fields, request.data.keyValuePairs)
       .then(result => sendResponse({ result }))
       .catch(error => {
         console.error('Analysis error:', error);
@@ -46,14 +46,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 });
 
 // Analyze form fields using OpenAI API
-async function analyzeFields(fields) {
+async function analyzeFields(fields, keyValuePairs) {
   const systemPrompt = `
-    あなたはフォームフィールドの分析の専門家です。
-    以下のフィールド情報を分析し、各フィールドの目的を特定してください。
-    結果は以下のJSON形式で返してください：
-    {
-      "fieldId": "推測された目的（姓、名、メールアドレス等）"
-    }
+   あなたはフォームフィールド入力の専門家です。
+
+   以下の情報をもとに、それぞれの入力フィールドに適切な値を入力するためのマッピングを作成してください。
+
+   ユーザーのキーと値の一覧：
+   ${JSON.stringify(keyValuePairs, null, 2)}
+
+   ページ上のフィールド情報：
+   ${JSON.stringify(fields, null, 2)}
+
+   結果は以下のJSON形式で返してください：
+   {
+     "フィールドID": "入力すべき値"
+   }
+
+   注意点：
+   - フィールドの目的とユーザーのキーをマッチングさせてください。
+   - 適切な値が見つからない場合、そのフィールドを無視してください。
   `;
 
   try {
@@ -69,10 +81,6 @@ async function analyzeFields(fields) {
           { 
             role: "system", 
             content: systemPrompt 
-          },
-          { 
-            role: "user", 
-            content: `フォームフィールド情報：${JSON.stringify(fields, null, 2)}` 
           }
         ],
         response_format: { type: "json_object" },
@@ -95,47 +103,10 @@ async function analyzeFields(fields) {
       throw new Error('OpenAI APIからの応答が不正です。');
     }
 
-    const analysis = JSON.parse(result.choices[0].message.content);
-    return enhanceAnalysis(analysis, fields);
+    const mappings = JSON.parse(result.choices[0].message.content);
+    return mappings;
   } catch (error) {
     console.error('OpenAI API Error:', error);
     throw error;
   }
-}
-
-// Enhance analysis with confidence scores
-function enhanceAnalysis(analysis, fields) {
-  const enhanced = {};
-  Object.entries(analysis).forEach(([fieldId, purpose]) => {
-    const field = fields.find(f => f.id === fieldId);
-    if (field) {
-      enhanced[fieldId] = {
-        purpose,
-        confidence: calculateConfidence(field, purpose)
-      };
-    }
-  });
-  return enhanced;
-}
-
-// Calculate confidence score
-function calculateConfidence(field, purpose) {
-  let score = 0.2; // Base confidence
-  const purposeLower = purpose.toLowerCase();
-
-  // Check for matches in field attributes
-  const matches = {
-    label: 0.3,
-    placeholder: 0.2,
-    ariaLabel: 0.2,
-    surroundingText: 0.1
-  };
-
-  Object.entries(matches).forEach(([attr, weight]) => {
-    if (field[attr]?.toLowerCase().includes(purposeLower)) {
-      score += weight;
-    }
-  });
-
-  return Math.min(1, score);
 }
